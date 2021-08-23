@@ -5,57 +5,58 @@ import tkinter.filedialog as tkfile
 import socket
 import time
 
-file = tkfile.askopenfilename()
-if file == '':
-    exit('file name is not valid plise inter the file name valide')
-with open(file, 'rb')as f :
-    image_file= f.read()
-file_name = os.basename(file)
-x = round(len(image_file)/1024)
-temp = image_file
+def open_file():
+    tk = Tk()
+    file = tkfile.askopenfilename().encode('utf-8')
+    tk.destroy()
+    print(file)
+    if file == '':
+        exit('file name is not valid plise inter the file name valide')
+    with open(file, 'rb')as f :
+        contact_file= f.read()
+    return file,contact_file
 
-if len(image_file)%1024 < 512: 
-    x+=1
-    
-y = 1024
-lis = []
-for i in range(x):
-    lis.append(temp[:y])
-    temp = temp[1024:]
-print(len(lis))
-for i in lis :
-    print(len(i))
+file, contact_file = open_file()
 
+def str_to_path(file):
+    file_name = os.path.normpath(file)
+    file_name = os.path.basename(file_name)
+    return file_name
 
-
-# Create an socket object. Family: Internet , Type: TCP
-mysock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# My system IP address (127.0.0.1)
-host = "127.0.0.1"
-port = 9393
+file_name = str_to_path(file)
 
 
 
-# Server Address
-addr = (host, port)
-mysock.bind(addr)
+def send_file(file_name: str, contact_file:bytes, host:str = '127.0.0.1', port:int = 1888, buffer_size:int = 208400):
+    "create an conecion and send len file , name file , file to client"
 
-# queue up to 10 requests
-mysock.listen(1)
+    x = round(len(contact_file)/buffer_size)
+    temp = contact_file
+    if x == 0:
+        x = 1
+    if len(contact_file)%buffer_size < 512: 
+        x+=1
+    # Create an socket object. Family: Internet , Type: TCP
+    mysock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-# with open('seven.png', 'rb') as f :
-#     send = f.read()
+    # Server Address
+    addr = (host, port)
+    mysock.bind(addr)
+    # queue up to 10 requests
+    mysock.listen(1)
 
-sendsplit = lis
+    print('start')
+    clientsock, clientaddr = mysock.accept()
+    print ("connection from: {0}".format(str(clientaddr)))
+    clientsock.send(str(x).encode('utf-8'))
+    time.sleep(1)
+    clientsock.send(file_name)
+    time.sleep(1)
 
-clientsock, clientaddr = mysock.accept()
-print ("connection from: {0}".format(str(clientaddr)))
-clientsock.send(str(len(sendsplit)).encode('ascii'))
-time.sleep(1)
-clientsock.send(file_name.encode('ascii'))
-time.sleep(1)
-for send_f in sendsplit :
-    clientsock.send(send_f)
-print('end')
-clientsock.close()
+    for i in range(x):
+        clientsock.send(temp[:buffer_size])
+        temp = temp[buffer_size:]
+    print('bytes send : ', len(contact_file))
+    clientsock.close()
+
+send_file(file_name, contact_file)
