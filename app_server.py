@@ -4,6 +4,7 @@ from tkinter import *
 import tkinter.filedialog as tkfile
 import socket
 import time
+import hashlib
 
 def open_file():
     tk = Tk()
@@ -25,9 +26,19 @@ def str_to_path(file):
 
 file_name = str_to_path(file)
 
+def calclate_hash_sha256(file_path : str) -> hex:
+    bufer_sizes = 65536
+    sha2 = hashlib.sha256()
 
+    with open(file_path , 'rb') as f:
+        while True:
+            file = f.read(bufer_sizes)
+            if not file:
+                break
+            sha2.update(file)
+    return sha2.hexdigest()
 
-def send_file(file_name: str, contact_file:bytes, host:str = '127.0.0.1', port:int = 1888, buffer_size:int = 208400):
+def send_file(file_name: str, contact_file:bytes, file_path:str, host:str = '127.0.0.1', port:int = 1888, buffer_size:int = 208400):
     "create an conecion and send len file , name file , file to client"
 
     x = round(len(contact_file)/buffer_size)
@@ -36,6 +47,9 @@ def send_file(file_name: str, contact_file:bytes, host:str = '127.0.0.1', port:i
         x = 1
     if len(contact_file)%buffer_size < 512: 
         x+=1
+    # calclate_hash_sha256
+    hash_file = calclate_hash_sha256(file_path)
+
     # Create an socket object. Family: Internet , Type: TCP
     mysock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -57,6 +71,8 @@ def send_file(file_name: str, contact_file:bytes, host:str = '127.0.0.1', port:i
         clientsock.send(temp[:buffer_size])
         temp = temp[buffer_size:]
     print('bytes send : ', len(contact_file))
+
+    clientsock.send(hash_file.encode('utf8'))
     clientsock.close()
 
-send_file(file_name, contact_file)
+send_file(file_name, contact_file, file_path= file)
